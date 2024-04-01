@@ -27,21 +27,35 @@ mongoose.connect(process.env.MONGODB_URI, { useNewUrlParser: true, useUnifiedTop
 // Routes
 app.get('/api/users', async (req, res) => {
   try {
-    // Pagination logic
-    const page = parseInt(req.query.page) || 1;
+    let filteredUsers = userData;
+
+    // Apply filters
+    const { search, domain, gender, availability, page = 1 } = req.query;
+
+    if (search) {
+      filteredUsers = filteredUsers.filter(user => 
+        user.first_name.toLowerCase().includes(search.toLowerCase()) ||
+        user.last_name.toLowerCase().includes(search.toLowerCase())
+      );
+    }
+
+    if (domain) {
+      filteredUsers = filteredUsers.filter(user => user.domain === domain);
+    }
+
+    if (gender) {
+      filteredUsers = filteredUsers.filter(user => user.gender === gender);
+    }
+
+    if (availability) {
+      filteredUsers = filteredUsers.filter(user => user.available === (availability === 'true'));
+    }
+
     const pageSize = 20;
     const startIndex = (page - 1) * pageSize;
     const endIndex = page * pageSize;
-
-    let filteredUsers = userData;
-
-    // Search by name
-    if (req.query.search) {
-      const searchRegex = new RegExp(req.query.search, 'i'); // Case-insensitive search
-      filteredUsers = userData.filter(user => searchRegex.test(user.first_name) || searchRegex.test(user.last_name));
-    }
-
     const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
+
     const totalPages = Math.ceil(filteredUsers.length / pageSize);
 
     res.json({ users: paginatedUsers, totalPages });
